@@ -1,0 +1,12 @@
+.emoji-button-container {
+  position: absolute;
+  display: flex;
+  height: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  right: 0;
+  padding-top: calc(0.75rem - var(--border-width));
+  padding-bottom: calc(0.75rem - var(--border-width));
+  padding-left: calc(0.75rem - var(--border-width));
+  --border-width: 1px;
+}

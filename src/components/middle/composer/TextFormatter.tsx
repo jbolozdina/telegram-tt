@@ -39,6 +39,7 @@ interface ISelectedTextFormats {
   underline?: boolean;
   strikethrough?: boolean;
   monospace?: boolean;
+  blockquote?: boolean;
   spoiler?: boolean;
 }
 
@@ -50,6 +51,7 @@ const TEXT_FORMAT_BY_TAG_NAME: Record<string, keyof ISelectedTextFormats> = {
   U: 'underline',
   DEL: 'strikethrough',
   CODE: 'monospace',
+  BLOCKQUOTE: 'blockquote',
   SPAN: 'spoiler',
 };
 const fragmentEl = document.createElement('div');
@@ -318,6 +320,36 @@ const TextFormatter: FC<OwnProps> = ({
     onClose();
   });
 
+  const handleBlockquoteText = useLastCallback(() => {
+    if (selectedTextFormats.blockquote) {
+      const element = getSelectedElement();
+      if (
+        !selectedRange ||
+        !element ||
+        element.tagName !== 'BLOCKQUOTE' ||
+        !element.textContent
+      ) {
+        return;
+      }
+
+      element.replaceWith(element.textContent);
+      setSelectedTextFormats((selectedFormats) => ({
+        ...selectedFormats,
+        blockquote: false,
+      }));
+      return;
+    }
+
+    const text = getSelectedText(true);
+
+    document.execCommand(
+      'insertHTML',
+      false,
+      `<blockquote class="blockquote" data-entity-type="${ApiMessageEntityTypes.Blockquote}">${text}</blockquote><br>`
+    );
+    onClose();
+  });
+
   const handleLinkUrlConfirm = useLastCallback(() => {
     const formattedLinkUrl = (ensureProtocol(linkUrl) || '').split('%').map(encodeURI).join('%');
 
@@ -353,6 +385,7 @@ const TextFormatter: FC<OwnProps> = ({
       m: handleMonospaceText,
       s: handleStrikethroughText,
       p: handleSpoilerText,
+      q: handleBlockquoteText,
     };
 
     const handler = HANDLERS_BY_KEY[getKeyFromEvent(e)];
@@ -456,6 +489,14 @@ const TextFormatter: FC<OwnProps> = ({
           onClick={handleStrikethroughText}
         >
           <Icon name="strikethrough" />
+        </Button>
+        <Button
+          color="translucent"
+          ariaLabel="Blockquoted text"
+          className={getFormatButtonClassName('blockquote')}
+          onClick={handleBlockquoteText}
+        >
+          <Icon name="quote-text" />
         </Button>
         <Button
           color="translucent"

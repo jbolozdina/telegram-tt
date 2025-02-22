@@ -536,6 +536,11 @@ const Main = ({
 
   return (
     <div ref={containerRef} id="Main" className={className}>
+      <div id="NewColumn" className="new-column">
+        <div>Folder</div>
+        <div>Folder</div>
+        <div>Folder</div>
+      </div>
       <LeftColumn ref={leftColumnRef} />
       <MiddleColumn leftColumnRef={leftColumnRef} isMobile={isMobile} />
       <RightColumn isMobile={isMobile} />

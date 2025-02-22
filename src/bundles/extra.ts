@@ -66,6 +66,7 @@ export { default as ReactionPicker } from '../components/middle/message/reaction
 export { default as AttachmentModal } from '../components/middle/composer/AttachmentModal';
 export { default as PollModal } from '../components/middle/composer/PollModal';
 export { default as SymbolMenu } from '../components/middle/composer/SymbolMenu';
+export { default as SimpleSymbolMenu } from '../components/middle/composer/SimpleSymbolMenu';
 export { default as ChatCommandTooltip } from '../components/middle/composer/ChatCommandTooltip';
 export { default as BotCommandMenu } from '../components/middle/composer/BotCommandMenu';
 export { default as MentionTooltip } from '../components/middle/composer/MentionTooltip';

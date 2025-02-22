@@ -28,9 +28,9 @@ import GroupChatInfo from '../../../common/GroupChatInfo';
 import Icon from '../../../common/icons/Icon';
 import PrivateChatInfo from '../../../common/PrivateChatInfo';
 import FloatingActionButton from '../../../ui/FloatingActionButton';
-import InputText from '../../../ui/InputText';
 import ListItem from '../../../ui/ListItem';
 import Spinner from '../../../ui/Spinner';
+import InputTextWithEmoji from "../../../ui/InputTextWithEmoji";
 
 type OwnProps = {
   state: FoldersState;
@@ -152,6 +152,7 @@ const SettingsFoldersEdit: FC<OwnProps & StateProps> = ({
   });
 
   const handleChange = useCallback((event: React.ChangeEvent<HTMLInputElement>) => {
+    // debugger;
     const { currentTarget } = event;
     dispatch({ type: 'setTitle', payload: currentTarget.value.trim() });
   }, [dispatch]);
@@ -296,7 +297,7 @@ const SettingsFoldersEdit: FC<OwnProps & StateProps> = ({
             </p>
           )}
 
-          <InputText
+          <InputTextWithEmoji
             className="mb-0"
             label={lang('FilterNameHint')}
             value={state.folder.title.text}

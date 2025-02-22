@@ -38,6 +38,8 @@ import Button from '../../ui/Button';
 import TextTimer from '../../ui/TextTimer';
 import TextFormatter from './TextFormatter.async';
 
+import { InputHistory } from '../../../util/InputHistory';
+
 const CONTEXT_MENU_CLOSE_DELAY_MS = 100;
 // Focus slows down animation, also it breaks transition layout in Chrome
 const FOCUS_DELAY_MS = 350;
@@ -106,6 +108,69 @@ function clearSelection() {
     selection.removeAllRanges();
   } else if (selection.empty) {
     selection.empty();
+  }
+}
+
+/**
+ * Computes the current selection range (start and end offsets) within the given element.
+ */
+function getSelectionRange(element: Node): { start: number, end: number } {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) {
+    return { start: 0, end: 0 };
+  }
+  const range = selection.getRangeAt(0);
+
+  // Create a pre-range that spans from the beginning of the element to the start of the selection.
+  const preRange = document.createRange();
+  preRange.selectNodeContents(element);
+  preRange.setEnd(range.startContainer, range.startOffset);
+  const start = preRange.toString().length;
+
+  preRange.selectNodeContents(element);
+  preRange.setEnd(range.endContainer, range.endOffset);
+  const end = preRange.toString().length;
+
+  return { start, end };
+}
+
+/**
+ * Sets the selection (or caret) range in the given element to the specified offsets.
+ */
+function setSelectionRange(element: Node, start: number, end: number): void {
+  const range = document.createRange();
+  let currentOffset = 0;
+  let startSet = false;
+
+  function traverse(node: Node): boolean {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || '';
+      const nextOffset = currentOffset + text.length;
+
+      if (!startSet && nextOffset >= start) {
+        range.setStart(node, start - currentOffset);
+        startSet = true;
+      }
+
+      if (startSet && nextOffset >= end) {
+        range.setEnd(node, end - currentOffset);
+        return true; // Both boundaries found.
+      }
+      currentOffset = nextOffset;
+    } else {
+      for (let i = 0; i < node.childNodes.length; i++) {
+        if (traverse(node.childNodes[i])) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+  traverse(element);
+  const selection = window.getSelection();
+  if (selection) {
+    selection.removeAllRanges();
+    selection.addRange(range);
   }
 }
 
@@ -178,6 +243,17 @@ const MessageInput: FC<OwnProps & StateProps> = ({
   const isMobileDevice = isMobile && (IS_IOS || IS_ANDROID);
 
   const [shouldDisplayTimer, setShouldDisplayTimer] = useState(false);
+
+  const inputHistoryRef = useRef<InputHistory | null>(null);
+
+  useEffect(() => {
+    if (inputRef.current && !inputHistoryRef.current) {
+      // Get initial HTML and current selection range.
+      const initialHtml = inputRef.current.innerHTML;
+      const { start, end } = getSelectionRange(inputRef.current);
+      inputHistoryRef.current = new InputHistory(initialHtml, start, end);
+    }
+  }, []);
 
   useEffect(() => {
     setShouldDisplayTimer(Boolean(timedPlaceholderLangKey && timedPlaceholderDate));
@@ -380,7 +456,37 @@ const MessageInput: FC<OwnProps & StateProps> = ({
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
-    // https://levelup.gitconnected.com/javascript-events-handlers-keyboard-and-load-events-1b3e46a6b0c3#1960
+    // Undo: CTRL/CMD + Z (without Shift)
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      if (inputHistoryRef.current && inputRef.current) {
+        const memento = inputHistoryRef.current.undo();
+        if (memento !== null) {
+          inputRef.current.innerHTML = memento.html;
+          onUpdate(memento.html);
+          inputRef.current.focus();
+          setSelectionRange(inputRef.current, memento.selectionStart, memento.selectionEnd);
+        }
+      }
+      return;
+    }
+
+    // Redo: CTRL/CMD + Y or CMD+SHIFT+Z
+    if (((e.ctrlKey || e.metaKey) && e.key === 'y') ||
+        ((e.metaKey && e.shiftKey) && e.key === 'z')) {
+      e.preventDefault();
+      if (inputHistoryRef.current && inputRef.current) {
+        const memento = inputHistoryRef.current.redo();
+        if (memento !== null) {
+          inputRef.current.innerHTML = memento.html;
+          onUpdate(memento.html);
+          inputRef.current.focus();
+          setSelectionRange(inputRef.current, memento.selectionStart, memento.selectionEnd);
+        }
+      }
+      return;
+    }
+
     const { isComposing } = e;
 
     const html = getHtml();
@@ -416,14 +522,18 @@ const MessageInput: FC<OwnProps & StateProps> = ({
   }
 
   function handleChange(e: ChangeEvent<HTMLDivElement>) {
-    const { innerHTML, textContent } = e.currentTarget;
-
-    onUpdate(innerHTML === SAFARI_BR ? '' : innerHTML);
+    const { innerHTML } = e.currentTarget;
+    const updatedHtml = innerHTML === SAFARI_BR ? '' : innerHTML;
+    onUpdate(updatedHtml);
+    if (inputHistoryRef.current && inputRef.current) {
+      const { start, end } = getSelectionRange(inputRef.current);
+      inputHistoryRef.current.save(updatedHtml, start, end);
+    }
 
     // Reset focus on the input to remove any active styling when input is cleared
     if (
       !IS_TOUCH_ENV
-      && (!textContent || !textContent.length)
+      && (!innerHTML || !innerHTML.length)
       // When emojis are not supported, innerHTML contains an emoji img tag that doesn't exist in the textContext
       && !(!IS_EMOJI_SUPPORTED && innerHTML.includes('emoji-small'))
       && !(innerHTML.includes('custom-emoji'))

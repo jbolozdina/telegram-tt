@@ -7,14 +7,31 @@
     position: relative;
   }
 
-  @media (max-width: 600px) {
-    height: calc(var(--vh, 1vh) * 100);
-  }
-
   @media (min-width: 926px) {
     display: grid;
-    grid-template-columns: auto 1fr;
+    /*
+      LeftColumn's max width is ~26.5rem,
+      1/4 of that is roughly 6.5rem.
+    */
+    grid-template-columns: 6.5rem auto 1fr;
     grid-template-rows: 100%;
+  }
+
+  // @media (max-width: 600px) {
+  //   height: calc(var(--vh, 1vh) * 100);
+  // }
+}
+
+.new-column {
+  background-color: var(--color-background-menu-separator);
+  /* Ensure the column does not shrink; you can also add padding or borders if needed */
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  div {
+    margin: 50%;
   }
 }
 
